@@ -71,24 +71,25 @@ class FieldtypeTextUnique extends FieldtypeText {
 		// if the value is the same as the default, then remove the field from the database because it's redundant
 		if($value === $this->getDefaultValue($page, $field)) return $this->deletePageField($page, $field);
 
-		$db = wire('db');
-		$value = $db->escape_string($this->sleepValue($page, $field, $value));
+		$database = wire('database');
+		
+		$value  = $database->escapeStr($this->sleepValue($page, $field, $value));
 		$pageID = (int) $page->id;
-		$table = $db->escapeTable($field->table);
+		$table  = $database->escapeTable($field->table);
 
-		$result = $db->query("SELECT COUNT(*) FROM `$table` WHERE pages_id=$pageID"); 
-		list($exists) = $result->fetch_row();
+		$stmnt  = $database->query("SELECT COUNT(*) FROM `$table` WHERE pages_id=$pageID"); 
+		$exists = ((int) $stmnt->fetchColumn(0) > 0);
 
-		if((int) $exists) {
-			$sql = "UPDATE `$table` SET data='$value' WHERE pages_id=$pageID"; 
-		} else {
-			$sql = "INSERT INTO `$table` (pages_id, data) VALUES($pageID, '$value')";
-		}
+		$sql = $exists
+			? "UPDATE `$table` SET data='$value' WHERE pages_id=$pageID"
+			: "INSERT INTO `$table` (pages_id, data) VALUES($pageID, '$value')"
+		;
+
+		$result = false;
 
 		try {
-			$result = $db->query($sql); 
-
-		} catch(WireDatabaseException $e) {
+			$result = $database->exec($sql);
+		} catch(Exception $e) {
 			$error = sprintf($this->_('Value "%s" is already in use on another page.'), wire('sanitizer')->entities($page->get($field->name))); 
 			$inputfield = $this->getInputfield($page, $field);
 			$inputfield->error($error); 
