@@ -18,9 +18,10 @@ class FieldtypeTextUnique extends FieldtypeText {
 	public static function getModuleInfo() {
 		return array(
 			'title' => 'Text Unique',
-			'version' => 300,
+			'version' => 301,
 			'summary' => 'Same as the Text fieldtype, but enforces that values stored are unique, site-wide.',
 			'requires' => 'ProcessWire>=3.0.150',
+			'href' => 'https://github.com/ryancramerdesign/FieldtypeTextUnique', 
 		);
 	}
 
@@ -61,14 +62,27 @@ class FieldtypeTextUnique extends FieldtypeText {
 	 *
 	 */
 	public function getDatabaseSchema(Field $field) {
-		if(!$field->hasFlag(Field::flagUnique)) {
-			$field->addFlag(Field::flagUnique); 
-			$field->save();
-		}
+		$this->checkField($field);
 		$length = $this->wire()->database->getMaxIndexLength();
 		$schema = parent::getDatabaseSchema($field);
 		$schema['keys']['data_exact'] = "UNIQUE `data_exact` (`data`($length))";
 		return $schema;
+	}
+
+	/**
+	 * Check that field has necessary flags
+	 * 
+	 * @param Field $field
+	 * 
+	 */
+	protected function checkField(Field $field) {
+		if($field->hasFlag(Field::flagUnique)) return;
+		if($field->hasFlag(Field::flagFieldgroupContext)) {
+			$field = $this->wire()->fields->get($field->name);
+			if(!$field) return;
+		}
+		$field->addFlag(Field::flagUnique);
+		$field->save();
 	}
 }
 
